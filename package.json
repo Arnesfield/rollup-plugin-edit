@@ -38,9 +38,8 @@
     "lint": "eslint . --ext .js,.ts",
     "lint:strict": "npm run lint -- --max-warnings 0",
     "start": "npm run watch -- --environment NODE_ENV:development",
-    "test": "concurrently -r --kill-others-on-fail npm:test:run npm:lint:strict \"tsc --skipLibCheck\"",
-    "test:run": "mocha -r tsx **/*.spec.ts",
-    "test:watch": "npm run test:run -- --watch --watch-files src,test",
+    "test": "concurrently -r --kill-others-on-fail mocha npm:lint:strict \"tsc --skipLibCheck\"",
+    "test:watch": "mocha -w",
     "watch": "npm run build -- -w --no-watch.clearScreen"
   },
   "devDependencies": {
