@@ -6,26 +6,62 @@ import {
   Plugin
 } from 'rollup';
 
+/** Chunk data. */
 export interface ChunkData {
+  /** Output file name. */
   fileName: string;
+  /** Output chunk contents. */
   contents: OutputChunk['code'];
+  /** Output chunk. */
   output: OutputChunk;
+  /** Output bundle. */
   bundle: OutputBundle;
 }
 
+/** Asset data. */
 export interface AssetData {
+  /** Output file name. */
   fileName: string;
+  /** Output asset contents. */
   contents: OutputAsset['source'];
+  /** Output asset. */
   output: OutputAsset;
+  /** Output bundle. */
   bundle: OutputBundle;
 }
 
+/** The plugin options. */
 export interface Options {
+  /**
+   * Disable plugin and prevent firing {@linkcode chunk} and {@linkcode asset} callbacks.
+   */
   disabled?: boolean;
+  /**
+   * Handle output chunks.
+   *
+   * If a string is returned, it will be used to replace the generated file contents.
+   * Otherwise, the file contents remain unchanged.
+   * @param data The chunk data.
+   * @returns The new file contents.
+   */
   chunk?(data: ChunkData): MaybePromise<OutputChunk['code'] | null | void>;
+  /**
+   * Handle output assets.
+   *
+   * If a string or {@linkcode Uint8Array} is returned,
+   * it will be used to replace the generated file contents.
+   * Otherwise, the file contents remain unchanged.
+   * @param data The chunk data.
+   * @returns The new file contents.
+   */
   asset?(data: AssetData): MaybePromise<OutputAsset['source'] | null | void>;
 }
 
+/**
+ * A Rollup plugin to edit generated files.
+ * @param options The plugin options.
+ * @returns The plugin.
+ */
 export function edit(options: Options = {}): Plugin {
   const name = 'edit';
   return {
