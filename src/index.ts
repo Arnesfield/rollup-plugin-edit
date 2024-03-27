@@ -1,4 +1,10 @@
-import { OutputAsset, OutputBundle, OutputChunk, Plugin } from 'rollup';
+import {
+  MaybePromise,
+  OutputAsset,
+  OutputBundle,
+  OutputChunk,
+  Plugin
+} from 'rollup';
 
 export interface ChunkData {
   fileName: string;
@@ -16,8 +22,8 @@ export interface AssetData {
 
 export interface Options {
   disabled?: boolean;
-  chunk?(data: ChunkData): string | null | void | Promise<string | null | void>;
-  asset?(data: AssetData): string | null | void | Promise<string | null | void>;
+  chunk?(data: ChunkData): MaybePromise<OutputChunk['code'] | null | void>;
+  asset?(data: AssetData): MaybePromise<OutputAsset['source'] | null | void>;
 }
 
 export function edit(options: Options = {}): Plugin {
@@ -38,11 +44,10 @@ export function edit(options: Options = {}): Plugin {
             ? fn({ fileName, contents, output, bundle } as ChunkData &
                 AssetData)
             : undefined;
-        if (typeof value !== 'string') {
-          // do nothing
-        } else if (chunk) {
+        const isString = typeof value === 'string';
+        if (chunk && isString) {
           output.code = value;
-        } else {
+        } else if (!chunk && (isString || Buffer.isBuffer(value))) {
           output.source = value;
         }
       }
