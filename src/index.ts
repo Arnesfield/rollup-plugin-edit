@@ -41,7 +41,7 @@ export function edit(options: Options = {}): Plugin {
         const fn = chunk ? options.chunk : options.asset;
         const value =
           typeof fn === 'function'
-            ? fn({ fileName, contents, output, bundle } as ChunkData &
+            ? await fn({ fileName, contents, output, bundle } as ChunkData &
                 AssetData)
             : undefined;
         const isString = typeof value === 'string';

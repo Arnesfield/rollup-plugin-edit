@@ -190,6 +190,34 @@ describe('edit', () => {
     expect(buffer.equals(content.sourceMap.array)).to.be.false;
   });
 
+  it('should modify output contents (async)', async () => {
+    const content = {
+      file: "console.log('Hello World!');",
+      sourceMap: Buffer.from('{"file":"file1.js"}')
+    };
+    const output = {
+      file: file(files.tmp, 'file1.js'),
+      sourceMap: file(files.tmp, 'file1.js.map')
+    };
+    await bundle({
+      input: files.index,
+      output: { file: output.file, sourcemap: true },
+      plugins: [
+        edit({
+          chunk: async () => content.file,
+          asset: async () => content.sourceMap
+        })
+      ]
+    });
+
+    // check if written files actually have updated contents
+    const contents = await fs.promises.readFile(output.file, 'utf8');
+    expect(contents).to.equal(content.file);
+
+    const buffer = await fs.promises.readFile(output.sourceMap);
+    expect(buffer.equals(content.sourceMap)).to.be.true;
+  });
+
   it('should only allow string contents for chunks', async () => {
     const output = file(files.tmp, 'file1.js');
     const content = Buffer.from('{"file":"file1.js"}');
