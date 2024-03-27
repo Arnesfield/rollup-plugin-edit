@@ -27,8 +27,6 @@
     "./package.json": "./package.json"
   },
   "main": "lib/index.cjs",
-  "jsdelivr": "lib/index.umd.min.js",
-  "unpkg": "lib/index.umd.min.js",
   "module": "lib/index.mjs",
   "types": "lib/index.d.ts",
   "files": [
