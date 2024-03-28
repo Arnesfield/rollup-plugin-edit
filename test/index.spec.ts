@@ -9,15 +9,30 @@ import { edit } from '../src/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function file(value: string, ...values: string[]) {
+function resolve(value: string, ...values: string[]) {
   return path.resolve(path.resolve(__dirname, value, ...values));
 }
 
 const files = {
-  add: file('fixtures/add.js'),
-  index: file('fixtures/index.js'),
-  tmp: file('fixtures/tmp')
+  index: resolve('fixtures/index.js'),
+  tmp: resolve('fixtures/tmp')
 };
+
+function file(fileName: string) {
+  const sourceMapName = fileName + '.map';
+  return {
+    js: resolve(files.tmp, fileName),
+    sourceMap: resolve(files.tmp, sourceMapName),
+    name: {
+      js: fileName,
+      sourceMap: sourceMapName
+    }
+  };
+}
+
+function toUint8Array(value: string) {
+  return new Uint8Array(value.split('').map(char => char.charCodeAt(0)));
+}
 
 async function bundle(options: RollupOptions) {
   const build = await rollup(options);
@@ -31,7 +46,7 @@ async function bundle(options: RollupOptions) {
 
 // remove tmp dir after build.write()
 afterEach(async () => {
-  await rimraf(file('fixtures/tmp'));
+  await rimraf(resolve('fixtures/tmp'));
 });
 
 describe('edit', () => {
@@ -75,14 +90,10 @@ describe('edit', () => {
 
     await bundle({
       input: files.index,
-      output: [
-        { dir: files.tmp },
-        { dir: `${files.tmp}/dir1` },
-        { dir: `${files.tmp}/dir2` }
-      ],
+      output: [{ dir: files.tmp }, { dir: `${files.tmp}/dir1` }],
       plugins: [plugin]
     });
-    expect(count.chunk).to.equal(3);
+    expect(count.chunk).to.equal(2);
     expect(count.asset).to.equal(0);
 
     count.chunk = count.asset = 0;
@@ -90,13 +101,12 @@ describe('edit', () => {
       input: files.index,
       output: [
         { dir: files.tmp, sourcemap: true },
-        { dir: `${files.tmp}/dir1`, sourcemap: true },
-        { dir: `${files.tmp}/dir2`, sourcemap: true }
+        { dir: `${files.tmp}/dir1`, sourcemap: true }
       ],
       plugins: [plugin]
     });
-    expect(count.chunk).to.equal(3);
-    expect(count.asset).to.equal(3);
+    expect(count.chunk).to.equal(2);
+    expect(count.asset).to.equal(2);
   });
 
   it('should not run callbacks when disabled', async () => {
@@ -107,8 +117,7 @@ describe('edit', () => {
         input: files.index,
         output: [
           { dir: files.tmp, sourcemap: true },
-          { dir: `${files.tmp}/dir1`, sourcemap: true },
-          { dir: `${files.tmp}/dir2`, sourcemap: true }
+          { dir: `${files.tmp}/dir1`, sourcemap: true }
         ],
         plugins: [
           edit({
@@ -118,50 +127,35 @@ describe('edit', () => {
           })
         ]
       });
-      const total = disabled ? 0 : 3;
+      const total = disabled ? 0 : 2;
       expect(count.chunk).to.equal(total);
       expect(count.asset).to.equal(total);
     }
   });
 
-  it('should modify output contents', async () => {
+  it('should modify output contents (string)', async () => {
+    const file1 = file('file1.js');
+    const file2 = file('file2.js');
     const content = {
       file: "console.log('Hello World!');",
-      sourceMap: {
-        string: '{"file": "file1.js"}',
-        array: Buffer.from('{"file":"file2.js"}')
-      }
-    };
-    const output = {
-      file1: file(files.tmp, 'file1.js'),
-      file2: file(files.tmp, 'file2.js'),
-      file3: file(files.tmp, 'file3.js'),
-      sourceMap: {
-        file1: file(files.tmp, 'file1.js.map'),
-        file2: file(files.tmp, 'file2.js.map'),
-        file3: file(files.tmp, 'file3.js.map')
-      }
+      sourceMap: '{"file": "file1.js"}'
     };
     await bundle({
       input: files.index,
       output: [
-        { file: output.file1, sourcemap: true },
-        { file: output.file2, sourcemap: true },
-        { file: output.file3, sourcemap: true }
+        { file: file1.js, sourcemap: true },
+        { file: file2.js, sourcemap: true }
       ],
       plugins: [
         edit({
           chunk(data) {
-            if (data.fileName === 'file1.js') {
+            if (data.fileName === file1.name.js) {
               return content.file;
             }
           },
           asset(data) {
-            switch (data.fileName) {
-              case 'file1.js.map':
-                return content.sourceMap.string;
-              case 'file2.js.map':
-                return content.sourceMap.array;
+            if (data.fileName === file1.name.sourceMap) {
+              return content.sourceMap;
             }
           }
         })
@@ -169,39 +163,28 @@ describe('edit', () => {
     });
 
     // check if written files actually have updated contents
-    let contents = await fs.promises.readFile(output.file1, 'utf8');
+    let contents = await fs.promises.readFile(file1.js, 'utf8');
     expect(contents).to.equal(content.file);
 
-    contents = await fs.promises.readFile(output.file2, 'utf8');
+    contents = await fs.promises.readFile(file2.js, 'utf8');
     expect(contents).to.not.equal(content.file);
 
-    contents = await fs.promises.readFile(output.file3, 'utf8');
-    expect(contents).to.not.equal(content.file);
+    contents = await fs.promises.readFile(file1.sourceMap, 'utf8');
+    expect(contents).to.equal(content.sourceMap);
 
-    contents = await fs.promises.readFile(output.sourceMap.file1, 'utf8');
-    expect(contents).to.equal(content.sourceMap.string);
-
-    let buffer = await fs.promises.readFile(output.sourceMap.file2);
-    expect(buffer.equals(content.sourceMap.array)).to.be.true;
-
-    buffer = await fs.promises.readFile(output.sourceMap.file3);
-    contents = buffer.toString();
-    expect(contents).to.not.equal(content.sourceMap.string);
-    expect(buffer.equals(content.sourceMap.array)).to.be.false;
+    contents = await fs.promises.readFile(file2.sourceMap, 'utf8');
+    expect(contents).to.not.equal(content.sourceMap);
   });
 
   it('should modify output contents (async)', async () => {
+    const file1 = file('file1.js');
     const content = {
       file: "console.log('Hello World!');",
-      sourceMap: Buffer.from('{"file":"file1.js"}')
-    };
-    const output = {
-      file: file(files.tmp, 'file1.js'),
-      sourceMap: file(files.tmp, 'file1.js.map')
+      sourceMap: toUint8Array('{"file":"file1.js"}')
     };
     await bundle({
       input: files.index,
-      output: { file: output.file, sourcemap: true },
+      output: { file: file1.js, sourcemap: true },
       plugins: [
         edit({
           chunk: async () => content.file,
@@ -211,23 +194,55 @@ describe('edit', () => {
     });
 
     // check if written files actually have updated contents
-    const contents = await fs.promises.readFile(output.file, 'utf8');
+    const contents = await fs.promises.readFile(file1.js, 'utf8');
     expect(contents).to.equal(content.file);
 
-    const buffer = await fs.promises.readFile(output.sourceMap);
+    const buffer = await fs.promises.readFile(file1.sourceMap);
     expect(buffer.equals(content.sourceMap)).to.be.true;
   });
 
   it('should only allow string contents for chunks', async () => {
-    const output = file(files.tmp, 'file1.js');
-    const content = Buffer.from('{"file":"file1.js"}');
+    const file1 = file('file1.js');
+    const content = toUint8Array('{"file":"file1.js"}');
     await bundle({
       input: files.index,
-      output: { file: output },
+      output: { file: file1.js },
       // force unwanted return value
       plugins: [edit({ chunk: () => content as any })]
     });
-    const buffer = await fs.promises.readFile(output);
+    const buffer = await fs.promises.readFile(file1.js);
     expect(buffer.equals(content)).to.be.false;
+  });
+
+  it('should accept Uint8Array for assets', async () => {
+    const file1 = file('file1.js');
+    const file2 = file('file2.js');
+    const content = {
+      array: toUint8Array('{"file":"file1.js"}'),
+      buffer: Buffer.from('{"file":"file2.js"}')
+    };
+    await bundle({
+      input: files.index,
+      output: [
+        { file: file1.js, sourcemap: true },
+        { file: file2.js, sourcemap: true }
+      ],
+      // force unwanted return value
+      plugins: [
+        edit({
+          asset(data) {
+            return data.fileName === file1.name.sourceMap
+              ? content.array
+              : content.buffer;
+          }
+        })
+      ]
+    });
+
+    let buffer = await fs.promises.readFile(file1.sourceMap);
+    expect(buffer.equals(content.array)).to.be.true;
+
+    buffer = await fs.promises.readFile(file2.sourceMap);
+    expect(buffer.equals(content.buffer)).to.be.true;
   });
 });
