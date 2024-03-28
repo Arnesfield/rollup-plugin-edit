@@ -1,7 +1,7 @@
 {
   "name": "rollup-plugin-edit",
   "version": "1.0.0",
-  "description": "A Rollup plugin to edit generated files.",
+  "description": "A Rollup plugin to edit generated file contents.",
   "keywords": [
     "rollup-plugin",
     "edit"

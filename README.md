@@ -8,7 +8,7 @@
 [![npm][npm-img]][npm-url]
 [![Node.js CI][ci-img]][ci-url]
 
-A Rollup plugin to edit generated files.
+A Rollup plugin to edit generated file contents.
 
 ## Install
 

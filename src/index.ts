@@ -65,7 +65,7 @@ function isUint8Array(value: unknown): value is Uint8Array {
 }
 
 /**
- * A Rollup plugin to edit generated files.
+ * A Rollup plugin to edit generated file contents.
  * @param options The plugin options.
  * @returns The plugin.
  */
