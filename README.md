@@ -69,23 +69,11 @@ If a string or `Uint8Array` is returned, it will be used to replace the generate
 
 Both [`chunk`](#chunk) and [`asset`](#asset) callbacks are fired with a parameter, `ChunkData` and `AssetData` respectively.
 
-```typescript
-interface ChunkData {
-  fileName: string;
-  contents: OutputChunk['code'];
-  output: OutputChunk;
-  bundle: OutputBundle;
-}
+You can get the generated file name through `data.fileName` and its contents with `data.contents`.
 
-interface AssetData {
-  fileName: string;
-  contents: OutputAsset['source'];
-  output: OutputAsset;
-  bundle: OutputBundle;
-}
-```
-
-The `contents` property contains the generated file contents.
+> [!TIP]
+>
+> See [`src/types.ts`](src/types.ts) for other properties included in `ChunkData` and `AssetData`.
 
 You can set the callbacks and return a value to replace the file's contents.
 
