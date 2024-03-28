@@ -57,6 +57,13 @@ export interface Options {
   asset?(data: AssetData): MaybePromise<OutputAsset['source'] | null | void>;
 }
 
+function isUint8Array(value: unknown): value is Uint8Array {
+  return (
+    value instanceof Uint8Array ||
+    Object.prototype.toString.call(value) === '[object Uint8Array]'
+  );
+}
+
 /**
  * A Rollup plugin to edit generated files.
  * @param options The plugin options.
@@ -80,10 +87,10 @@ export function edit(options: Options = {}): Plugin {
             ? await fn({ fileName, contents, output, bundle } as ChunkData &
                 AssetData)
             : undefined;
-        const isString = typeof value === 'string';
-        if (chunk && isString) {
+        const string = typeof value === 'string';
+        if (chunk && string) {
           output.code = value;
-        } else if (!chunk && (isString || Buffer.isBuffer(value))) {
+        } else if (!chunk && (string || isUint8Array(value))) {
           output.source = value;
         }
       }
