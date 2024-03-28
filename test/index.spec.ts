@@ -225,7 +225,6 @@ describe('edit', () => {
         { file: file1.js, sourcemap: true },
         { file: file2.js, sourcemap: true }
       ],
-      // force unwanted return value
       plugins: [
         edit({
           asset(data) {
