@@ -4,7 +4,7 @@ import path from 'path';
 import { rimraf } from 'rimraf';
 import { RollupOptions, rollup } from 'rollup';
 import { fileURLToPath } from 'url';
-import { edit } from '../src/index.js';
+import { AssetData, ChunkData, edit } from '../src/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,29 +62,27 @@ describe('edit', () => {
   });
 
   it('should run `chunk()` and `asset()` callbacks', async () => {
+    function expectData(data: ChunkData | AssetData) {
+      expect(data).to.be.an('object');
+      expect(data).to.have.property('fileName').that.is.a('string');
+      expect(data).to.have.property('contents').that.is.a('string');
+      expect(data).to.have.property('output').that.is.an('object');
+      expect(data).to.have.property('bundle').that.is.an('object');
+      expect(data).to.have.property('options').that.is.an('object');
+      expect(data).to.have.property('isWrite').that.is.a('boolean');
+    }
+
     const count = { chunk: 0, asset: 0 };
     const plugin = edit({
       chunk(data) {
         count.chunk++;
-        expect(data).to.be.an('object');
-        expect(data).to.have.property('bundle').that.is.an('object');
-        expect(data).to.have.property('output').that.is.an('object');
-        expect(data).to.have.property('contents').that.is.a('string');
-        expect(data)
-          .to.have.property('fileName')
-          .that.is.a('string')
-          .that.equals('index.js');
+        expectData(data);
+        expect(data.fileName).to.equal('index.js');
       },
       asset(data) {
         count.asset++;
-        expect(data).to.be.an('object');
-        expect(data).to.have.property('bundle').that.is.an('object');
-        expect(data).to.have.property('output').that.is.an('object');
-        expect(data).to.have.property('contents').that.is.a('string');
-        expect(data)
-          .to.have.property('fileName')
-          .that.is.a('string')
-          .that.equals('index.js.map');
+        expectData(data);
+        expect(data.fileName).to.equal('index.js.map');
       }
     });
 
